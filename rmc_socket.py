@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import os
 from threading import Thread
 
 import redis
@@ -7,6 +9,10 @@ from aiohttp import web
 from redis import Redis
 
 VOTECOUNT_NAMESPACE = "/voteCount"
+LOG_FILE = "rmc_socket.log"
+
+logging.basicConfig(filename=LOG_FILE, level=logging.INFO)
+log = logging.getLogger(__name__)
 
 
 class RMCSocketServer:
@@ -33,9 +39,11 @@ class RMCSocketServer:
             color_keys = r.keys("rmc:count:*")
             counts = r.mget(color_keys)
             self.total = sum(int(c) for c in counts)
+            log.info(f"Redis says {self.total} (start)")
 
             @self.sio.on("connect", namespace=VOTECOUNT_NAMESPACE)
             async def connect(sid, _):
+                log.info(f"New connection!")
                 await self.sio.send(str(self.total), namespace=VOTECOUNT_NAMESPACE, room=sid)
 
             pubsub = r.pubsub()
@@ -44,6 +52,7 @@ class RMCSocketServer:
                 data = next(pubsub.listen())
                 if data["type"] == "message" and data["channel"].decode() == "rmc:vote":
                     self.total += 1
+                    log.info(f"Redis says new vote")
                     await self.sio.send(str(self.total), namespace=VOTECOUNT_NAMESPACE)
 
     def redis(self):
