@@ -50,6 +50,7 @@ class RMCSocketServer:
             pubsub.subscribe("rmc:vote")
             while True:
                 data = next(pubsub.listen())
+                log.debug(str(data))
                 if data["type"] == "message" and data["channel"].decode() == "rmc:vote":
                     self.total += 1
                     log.info(f"Redis says new vote")
