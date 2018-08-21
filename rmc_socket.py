@@ -49,7 +49,10 @@ class RMCSocketServer:
             pubsub = r.pubsub()
             pubsub.subscribe("rmc:vote")
             while True:
-                data = next(pubsub.listen())
+                data = pubsub.get_message()
+                if not data:
+                    await asyncio.sleep(0.001)
+                    continue
                 log.debug(str(data))
                 if data["type"] == "message" and data["channel"].decode() == "rmc:vote":
                     self.total += 1
